@@ -13,6 +13,21 @@ def ask(label, default=''):
     text=input(f'{label} [{default}]: ').strip()
     return text or default
 
+def choose_display_profile():
+    """Select a kiosk profile once, for this device only."""
+    print()
+    print('Choose display type / Vaelg skaermtype:')
+    print('  1) Standalone display / Almindelig skaerm (no touch)')
+    print('  2) Touchscreen / Touchskaerm')
+    while True:
+        answer=ask('Display type (1/2)','1').strip().lower()
+        if answer in ('1','standalone','display'):
+            return 'standalone'
+        if answer in ('2','touch','touchscreen'):
+            return 'touchscreen'
+        print('Please choose 1 or 2.')
+
+
 def main():
     if CONFIG.exists():
         print('Existing configuration preserved:',CONFIG)
@@ -20,8 +35,16 @@ def main():
     hostname=socket.gethostname().lower()
     ident=re.sub('[^a-z0-9_]+','_',hostname.replace('-','_')).strip('_')
     print('Configuration is local to this Pi. Credentials never go into Git.')
+    profile=choose_display_profile()
+    if profile=='touchscreen':
+        print('Touchscreen: connect HDMI for video and the display USB touch cable.')
+        print('Touch events use Raspberry Pi OS input support; touch-to-wake,')
+        print('rotation and hardware brightness are NOT configured automatically.')
+        print('The screen starts in Manual mode; enable auto-off only after testing touch.')
     name=ask('Home Assistant device name', hostname.replace('-',' ').title())
-    migration=ask('Preserve old Hallway MQTT identities? yes/no','no').lower()=='yes'
+    # Do not allow a new touchscreen to accidentally claim the Hallway IDs.
+    migration=(profile=='standalone' and
+               ask('Preserve old Hallway MQTT identities? yes/no','no').lower()=='yes')
     if migration:
         confirm=ask('Type HALLWAY to confirm migration','')
         if confirm!='HALLWAY':raise SystemExit('Migration not confirmed')
@@ -52,6 +75,7 @@ def main():
     dashboards={'Hallway': initial} if migration else {'Main':initial}
     cfg={
         'migration':'hallway-v2' if migration else None,
+        'display_profile':profile,
         'identity':{'name':name,'model':'Raspberry Pi'},
         'mqtt':{'host':host,'port':port,'username':user,'password':password,'base':base,'unique_id':unique},
         'kiosk':{'user':kiosk_user,'uid':uid,'wayland':display,'output':output},
@@ -66,5 +90,8 @@ def main():
     CONFIG.write_text(json.dumps(cfg,indent=2))
     os.chmod(CONFIG,0o600)
     print('Created',CONFIG)
+    print('Display profile:',profile)
+    print('Home Assistant MQTT identity:',unique)
+    print('Existing Pi installations keep their current settings on future updates.')
 
 if __name__=='__main__':main()
