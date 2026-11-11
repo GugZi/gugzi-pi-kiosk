@@ -16,6 +16,7 @@ from urllib.error import HTTPError
 
 import paho.mqtt.client as mqtt
 from .smart import SmartFeatures
+from .release_notes import summarize_release
 
 VERSION = (Path(__file__).resolve().parent.parent / 'VERSION').read_text().strip()
 CONFIG = Path('/etc/gugzi-kiosk/config.json')
@@ -82,6 +83,7 @@ class Controller:
         self.last_poll=0
         self.latest_release=VERSION
         self.release_url=''
+        self.release_summary=''
         self.last_gh_check=0
         self.smart=SmartFeatures(self)
         self.command_queue=queue.Queue(maxsize=64)
@@ -490,6 +492,7 @@ class Controller:
             if re.fullmatch(r'v\d+\.\d+\.\d+',tag):
                 self.latest_release=tag[1:]
                 self.release_url=data.get('html_url','')
+                self.release_summary=summarize_release(data.get('body',''))
         except Exception as exc:
             print('GitHub update check:', exc, flush=True)
 
@@ -510,6 +513,8 @@ class Controller:
              'error':str(update.get('error',''))[:220]}
         if self.release_url:
             obj['release_url']=self.release_url
+        if self.release_summary:
+            obj['release_summary']=self.release_summary
         self.publish('controller_update', json.dumps(obj))
 
     def start_controller_update(self):
