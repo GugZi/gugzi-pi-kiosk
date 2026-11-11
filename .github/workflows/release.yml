@@ -54,16 +54,16 @@ jobs:
         run: |
           set -euo pipefail
           {
-            printf '## Changelog\\n\\n'
+            printf '## Changelog\n\n'
             cat CHANGELOG.md
-            printf '\\n## Changes since previous release\\n\\n'
+            printf '\n## Changes since previous release\n\n'
             previous_tag="$(git tag --sort=-version:refname --list 'v[0-9]*' | head -n 1)"
             if [[ -n "$previous_tag" ]]; then
               git log "$previous_tag..HEAD" --no-merges --pretty='- %s (%h)' || true
             else
               git log -n 30 --no-merges --pretty='- %s (%h)'
             fi
-            printf '\\n## Source\\n\\nCommit: \`%s\`\\n' "$GITHUB_SHA"
+            printf '\n## Source\n\nCommit: `%s`\n' "$GITHUB_SHA"
           } > dist/release-notes.md
       - name: Publish GitHub release
         if: github.event_name != 'pull_request'
