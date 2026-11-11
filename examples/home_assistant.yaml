@@ -1,0 +1,43 @@
+# Add to Home Assistant automations.yaml, adjust binary sensor and browser_id.
+# These examples use the existing Mosquitto integration and DO NOT publish secrets.
+- id: gugzi_kiosk_house_mode
+  alias: GugZi Kiosk - Broadcast house mode
+  triggers:
+    - trigger: state
+      entity_id: input_select.house_mode
+    - trigger: homeassistant
+      event: start
+  actions:
+    - action: mqtt.publish
+      data:
+        topic: gugzi/kiosk/house_mode
+        payload: "{{ states('input_select.house_mode') }}"
+        retain: true
+
+- id: gugzi_kiosk_hallway_motion
+  alias: GugZi Kiosk - Hallway screen motion
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.hallway_motion_sensors
+      to: 'on'
+  actions:
+    - action: mqtt.publish
+      data:
+        topic: gugzi/pi_hallway_screen/ha/motion
+        payload: 'ON'
+        retain: false
+
+# OPTIONAL: Browser Mod is a separate HA integration, and each kiosk browser
+# needs to be registered with its own browser_id. Replace BROWSER_ID below.
+# MQTT notifications are published by the Pi on .../notification_event.
+# - id: gugzi_kiosk_hallway_notifications
+#   alias: GugZi Kiosk - Show notifications via Browser Mod
+#   triggers:
+#     - trigger: mqtt
+#       topic: gugzi/pi_hallway_screen/notification_event
+#   actions:
+#     - action: browser_mod.notification
+#       data:
+#         browser_id: BROWSER_ID
+#         message: "{{ trigger.payload_json.message }}"
+#         duration: 15000
