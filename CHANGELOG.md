@@ -1,5 +1,21 @@
 # Changelog
 
+## Next release – Chromium dashboard crash recovery
+
+### Added
+- New Home Assistant diagnostic sensor **Chromium webside** showing `running`, `missing`, `unknown`, `offline` or `inactive`.
+- Detect Chromium's “Aw, Snap!” state when only the internal `--top-chrome-webui` renderer survives and the Home Assistant page renderer is missing.
+- Automatic PiKiosk reload after three consecutive missing-renderer checks, with startup grace and a ten-minute recovery cooldown.
+- Regression tests for renderer recognition, false positives, startup/cooldown behavior and a screen intentionally switched off.
+
+### Fixed
+- Existing watchdog did not recover a crashed Chromium tab while Cage and Chromium processes remained alive.
+- A temporary Wayland/HDMI scheduling error no longer prevents the browser health checks and MQTT monitoring from running in the same cycle.
+
+### Notes
+- Recovery requires both existing **Automatisk gendannelse** and the local recovery setting enabled, with the screen requested on. It does not change motion, brightness, dashboard or MQTT identities.
+- This is a process-based health heuristic, not a Chromium DevTools/tab-state API. It avoids reloading when the renderer state is uncertain.
+
 ## Next release – MQTT Update version synchronization
 
 ### Fixed
