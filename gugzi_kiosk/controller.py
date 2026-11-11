@@ -307,8 +307,7 @@ class Controller:
                 })
         self.discovery('sensor','update_error',{
             'name':'Seneste controller-opdateringsfejl',
-            'state_topic':self.base+'/controller_update',
-            'value_template':"{{ value_json.error | default('') }}",
+            'state_topic':self.base+'/update_error',
             'entity_category':'diagnostic',
             'icon':'mdi:alert-circle-outline'
         })
@@ -507,10 +506,13 @@ class Controller:
             if semver(latest)<semver(current): latest=current
         except Exception:
             latest=current
+        # The MQTT Update platform rejects unknown JSON keys (in particular
+        # "error"), which would make Home Assistant keep an outdated version.
+        # Publish diagnostics on their own topic instead.
+        self.publish('update_error',str(update.get('error',''))[:220] or 'Ingen')
         obj={'installed_version':current,'latest_version':latest,
              'title':'GugZi Pi Kiosk Controller',
-             'in_progress':bool(update.get('in_progress',False)),
-             'error':str(update.get('error',''))[:220]}
+             'in_progress':bool(update.get('in_progress',False))}
         if self.release_url:
             obj['release_url']=self.release_url
         if self.release_summary:
