@@ -46,6 +46,12 @@ Den enkelte Pi kan ikke automatisk vide, hvilke Home Assistant-entiteter der er 
 
 På Hallway-Pi er bevægelsessensoren `binary_sensor.hallway_motion_sensors`. Aktiver først Home Assistant-automation, der publicerer bevægelse; slå derefter **Bevægelsesstyring** til. Hvis der ikke kommer MQTT-bevægelseshændelser, vil skærmen forblive slukket i `Automatic`-tilstand.
 
+### Automatisk recovery, når Chromium viser “Aw, Snap!”
+
+Controlleren kontrollerer også, om Chromiums **webside-renderer** kører. Chromium kan godt være aktiv, mens en enkelt fane er crashet. Hvis kun den interne `--top-chrome-webui`-renderer findes, og ingen normal webside-renderer er aktiv ved tre målinger i træk, genstarter controlleren PiKiosk. Kontrollen starter først efter en opstartsperiode på mindst 2 minutter; der går mindst 10 minutter mellem forsøg.
+
+Denne mekanisme bruger den eksisterende **Automatisk gendannelse**-switch. Den anvendes kun, hvis skærmen er sat til at være tændt. Ukendt processtatus udløser ingen genstart. Diagnostiksensoren **Chromium webside** viser `running`, `missing`, `unknown`, `offline` eller `inactive`. Funktionen er en konservativ procesbaseret kontrol, ikke en fuld garanti for at browserfanens indhold er korrekt.
+
 ### Fjerne musemarkøren fra Cage/Wayland
 
 Cage har ikke en generel, pålidelig `hide_cursor`-indstilling. På nogle Raspberry Pi'er stammer markøren fra de virtuelle HDMI-CEC-pointere `vc4-hdmi-0/1` og ikke fra en rigtig mus. Projektet indeholder en **valgfri og reversibel** udev-regel, der kun ignorerer disse to pseudo-enheder for libinput:
