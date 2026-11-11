@@ -17,6 +17,7 @@ from urllib.error import HTTPError
 import paho.mqtt.client as mqtt
 from .smart import SmartFeatures
 from .release_notes import summarize_release
+from .browser_health import browser_renderer_state
 
 VERSION = (Path(__file__).resolve().parent.parent / 'VERSION').read_text().strip()
 CONFIG = Path('/etc/gugzi-kiosk/config.json')
@@ -71,7 +72,9 @@ class Controller:
         self.last_brightness_read=0
         self.last_kiosk_recovery=0
         self.failures=0
-        self.last_refresh=0
+        self.last_refresh=time.monotonic()  # Allow Chromium to finish starting before health checks.
+        self.renderer_missing_checks=0
+        self.browser_renderer_status='unknown'
         self.ha_online=None
         self.last_hdmi='unknown'
         self.update_available='unknown'
@@ -253,7 +256,8 @@ class Controller:
             'kiosk':'ON' if self.kiosk_running() else 'OFF',
             'warning':'ON' if warn else 'OFF',
             'updates':self.update_available, 'result':self.last_result, 'version':VERSION,
-            'recovery_count':self.smart.recoveries, 'house_mode':self.smart.house_mode or 'unknown'
+            'recovery_count':self.smart.recoveries, 'house_mode':self.smart.house_mode or 'unknown',
+            'browser_renderer':self.browser_renderer_status
         }
 
     def discovery(self,kind,key,body):
@@ -305,6 +309,13 @@ class Controller:
                     'command_template':'url:'+name+':{{ value }}',
                     'max':255,'mode':'text','icon':'mdi:link'
                 })
+        self.discovery('sensor','browser_renderer',{
+            'name':'Chromium webside',
+            'state_topic':self.base+'/state',
+            'value_template':'{{ value_json.browser_renderer }}',
+            'entity_category':'diagnostic',
+            'icon':'mdi:web'
+        })
         self.discovery('sensor','update_error',{
             'name':'Seneste controller-opdateringsfejl',
             'state_topic':self.base+'/update_error',
@@ -449,17 +460,48 @@ class Controller:
         if target!=requested:self.screen(target)
 
     def recover(self):
-        if not self.cfg['recovery']['enabled'] or not self.smart.prefs['recovery_enabled'] or self.state['screen_requested']=='OFF':
+        # A crashed Chromium page can still leave Cage and Chromium running.
+        # Repeatedly missing *page* renderers are more useful than process
+        # presence alone, but avoid false positives during startup/loading.
+        enabled = self.cfg['recovery']['enabled'] and self.smart.prefs['recovery_enabled']
+        if not enabled or self.state['screen_requested']=='OFF':
             self.failures=0
+            self.renderer_missing_checks=0
+            self.browser_renderer_status='inactive'
             return
-        self.failures=0 if self.kiosk_running() else self.failures+1
+
         now=time.monotonic()
-        if self.failures>=3 and now-self.last_kiosk_recovery>600:
+        if not self.kiosk_running():
+            self.browser_renderer_status='offline'
+            self.renderer_missing_checks=0
+            self.failures+=1
+            if self.failures>=3 and now-self.last_kiosk_recovery>600:
+                self.last_kiosk_recovery=now
+                self.failures=0
+                self.pikiosk_reload()
+                self.last_result='PiKiosk recovered'
+                self.smart.note_recovery('PiKiosk reload')
+            return
+
+        self.failures=0
+        self.browser_renderer_status=browser_renderer_state(self.cfg['kiosk']['uid'])
+
+        # Wait at least two minutes after PiKiosk startup/reload before
+        # checking. Require 3 consecutive 30s misses and 10m between reloads.
+        # If Home Assistant is known offline, do not repeatedly restart.
+        if (self.browser_renderer_status=='missing'
+                and now-self.last_refresh>=120
+                and self.smart.ha_connected is not False):
+            self.renderer_missing_checks+=1
+        else:
+            self.renderer_missing_checks=0
+
+        if self.renderer_missing_checks>=3 and now-self.last_kiosk_recovery>600:
             self.last_kiosk_recovery=now
-            self.failures=0
+            self.renderer_missing_checks=0
             self.pikiosk_reload()
-            self.last_result='PiKiosk recovered'
-            self.smart.note_recovery('PiKiosk reload')
+            self.last_result='Chromium dashboard renderer missing; PiKiosk reloaded'
+            self.smart.note_recovery('Chromium page renderer crash')
 
     def check_updates(self,force=False):
         # Reports distribution package versions, not a remote arbitrary branch.
@@ -548,7 +590,13 @@ class Controller:
             while True:
                 if time.monotonic()-self.last_poll>=30 and self.lock.acquire(blocking=False):
                     try:
-                        self.schedule()
+                        # Wayland can be temporarily unavailable while Cage
+                        # restarts. Keep health checks running even if automatic
+                        # HDMI scheduling fails.
+                        try:
+                            self.schedule()
+                        except Exception as exc:
+                            print('Schedule error:',exc,flush=True)
                         self.recover()
                         self.check_updates()
                         self.check_controller_release()
