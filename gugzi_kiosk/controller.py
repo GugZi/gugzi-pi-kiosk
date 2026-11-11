@@ -25,6 +25,23 @@ def call(args, timeout=15):
     return subprocess.run(args, text=True, capture_output=True, timeout=timeout, check=True)
 
 
+def ddc_call(args, timeout=18):
+    """Run ddcutil with a writable, private cache outside protected /root.
+
+    The kiosk service uses ProtectHome=true, so ddcutil's default
+    /root/.cache/ddcutil/dsa location is unavailable.
+    """
+    cache_dir = STATE_DIR / '.cache'
+    cache_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    env = os.environ.copy()
+    env['HOME'] = str(STATE_DIR)
+    env['XDG_CACHE_HOME'] = str(cache_dir)
+    return subprocess.run(
+        ['ddcutil', *args],
+        text=True, capture_output=True, timeout=timeout, check=True, env=env
+    )
+
+
 def load_json(path, default):
     try:
         return json.loads(path.read_text())
@@ -149,7 +166,7 @@ class Controller:
 
     def brightness_get(self):
         bus=self.cfg['brightness']['bus']
-        raw=call(['ddcutil','--bus',str(bus),'getvcp','10'],16).stdout
+        raw=ddc_call(['--bus',str(bus),'getvcp','10'],16).stdout
         match=re.search(r'current value\s*=\s*(\d+).*?max value\s*=\s*(\d+)',raw,re.I|re.S)
         if not match or int(match.group(2))<=0:
             raise RuntimeError('Could not read DDC brightness')
@@ -161,7 +178,7 @@ class Controller:
         if self.state['screen_requested']=='OFF':
             raise RuntimeError('Screen requested off')
         value=max(5,min(100,int(val)))
-        call(['ddcutil','--bus',str(self.cfg['brightness']['bus']),'setvcp','10',str(value)],18)
+        ddc_call(['--bus',str(self.cfg['brightness']['bus']),'setvcp','10',str(value)],18)
         actual=self.brightness_get()
         self.last_brightness=actual
         self.last_brightness_read=time.monotonic()
