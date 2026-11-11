@@ -1,5 +1,18 @@
 # Changelog
 
+## Next release – Standalone and touchscreen setup profiles
+
+### Added
+- One installer now offers **1) Standalone display** and **2) Touchscreen**, with standalone selected by default.
+- Store per-Pi `display_profile` locally and publish **Skærmtype** in Home Assistant.
+- New touchscreen installations always use unique MQTT IDs instead of reusing Hallway's MQTT identity.
+- Automated tests for both profile choices, old Hallway migration, setup defaults and existing config preservation.
+
+### Compatibility
+- Existing Raspberry Pi installations without a display profile remain **Standalone** and keep their existing dashboards, Home Assistant entities, update process, credentials and IDs.
+- Touch support uses the installed Raspberry Pi OS/Cage input stack; rotation, calibration, touch-to-wake and backlight control are **not** configured or promised until the physical touch panel has been tested.
+- Installer does not overwrite local configuration during future updates.
+
 ## Next release – Chromium dashboard crash recovery
 
 ### Added

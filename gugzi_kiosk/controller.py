@@ -52,6 +52,10 @@ class Controller:
         self.identity = cfg['identity']
         self.base = cfg['mqtt']['base']
         self.unique = cfg['mqtt']['unique_id']
+        # Pre-profile installations are ordinary non-touch kiosk displays.
+        self.display_profile = cfg.get('display_profile', 'standalone')
+        if self.display_profile not in ('standalone', 'touchscreen'):
+            raise ValueError('Invalid display_profile: expected standalone or touchscreen')
         self.state = load_json(STATE_PATH, {'mode':'Manual', 'dashboard':cfg['dashboards']['default'], 'screen_requested':'ON'})
         if self.state.get('mode') not in ('Manual','Automatic','Always on','Always off'):
             self.state['mode'] = 'Manual'
@@ -257,7 +261,8 @@ class Controller:
             'warning':'ON' if warn else 'OFF',
             'updates':self.update_available, 'result':self.last_result, 'version':VERSION,
             'recovery_count':self.smart.recoveries, 'house_mode':self.smart.house_mode or 'unknown',
-            'browser_renderer':self.browser_renderer_status
+            'browser_renderer':self.browser_renderer_status,
+            'display_profile':'Touchscreen' if self.display_profile=='touchscreen' else 'Standalone'
         }
 
     def discovery(self,kind,key,body):
@@ -287,7 +292,8 @@ class Controller:
             ('throttled','Throttling',None,'mdi:speedometer',False),
             ('throttle_hex','Throttling kode',None,'mdi:chip',False),
             ('updates','Tilgængelige opdateringer',None,'mdi:package-up',False),
-            ('version','Controller-version',None,'mdi:source-branch',False)]: sensor(key,label,unit,icon,klass)
+            ('version','Controller-version',None,'mdi:source-branch',False),
+            ('display_profile','Skærmtype',None,'mdi:monitor-touch',False)]: sensor(key,label,unit,icon,klass)
         self.discovery('binary_sensor','online',{'name':'Forbindelse', 'state_topic':self.base+'/availability','payload_on':'online','payload_off':'offline','device_class':'connectivity'})
         for key,label,icon in [('kiosk','PiKiosk kører','mdi:monitor-dashboard'),('warning','Systemadvarsel','mdi:alert')]:
             self.discovery('binary_sensor',key,{'name':label,'state_topic':self.base+'/state','value_template':'{{ value_json.'+key+' }}','payload_on':'ON','payload_off':'OFF','icon':icon})

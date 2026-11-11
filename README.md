@@ -12,6 +12,25 @@ cd gugzi-pi-kiosk
 sudo bash install.sh
 ```
 
+### Valg af skærmtype i samme installation
+
+Første gang du kører `sudo bash install.sh`, vælger du profil:
+
+```text
+Choose display type / Vaelg skaermtype:
+  1) Standalone display / Almindelig skaerm (no touch)
+  2) Touchscreen / Touchskaerm
+Display type (1/2) [1]:
+```
+
+- **1 – Almindelig skærm:** eksisterende PiKiosk-styring til en skærm uden touch. Brug denne til Hallway-Pi.
+- **2 – Touchskærm:** samme PiKiosk/controller og GitHub-opdateringer, men en særskilt lokal `display_profile: touchscreen` og MQTT-identitet. Touch sker via Raspberry Pi OS/Cage/libinput, ikke via et separat program. Brug HDMI til billede og typisk USB til touch.
+- Begge profiler vises i Home Assistant med diagnostiksensoren **Skærmtype** (`Standalone` eller `Touchscreen`). Eksisterende installationer uden `display_profile` fortsætter automatisk som **Standalone**.
+
+Touchprofilen starter med den normale sikre **Manual**-skærmtilstand. Den giver **ikke** automatisk touch-to-wake, rotation, kalibrering eller fysisk lysstyrke: disse funktioner afhænger af den konkrete skærm og skal testes, før de aktiveres. Undgå HDMI auto-off, indtil touch fortsat er testet ved sluk/tænd. På Raspberry Pi 3 B+ er et let dashboard uden mange animerede grafer bedst.
+
+Installationsguiden spørger kun om skærmprofil ved **ny** installation. Geninstallation og GitHub-opdateringer bevarer `/etc/gugzi-kiosk/config.json`, så ingen eksisterende Pi skifter profil eller MQTT-identitet. For manuelt profilswitch skal du redigere `display_profile` i den lokale konfiguration og genstarte controlleren; det ændrer ikke PiKiosks eller touch-driverens indstillinger.
+
 Installationsguiden gemmer MQTT-login lokalt i `/etc/gugzi-kiosk/config.json` (rettigheder `0600`). **Kun på den eksisterende Hallway-Pi:** vælg Hallway-migration, så de gamle MQTT-ID'er bevares. Andre Pi'er skal have deres egne MQTT-ID'er. Brugeren og adgangskoder må ikke committes til GitHub.
 
 ```bash
