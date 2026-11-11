@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Python setup
         uses: actions/setup-python@v5
         with:
@@ -46,6 +48,23 @@ jobs:
           echo "$VERSION" > dist/gugzi-pi-kiosk/VERSION
           (cd dist && zip -qr gugzi-pi-kiosk.zip gugzi-pi-kiosk -x '*/__pycache__/*' '*.pyc')
           (cd dist && sha256sum gugzi-pi-kiosk.zip > gugzi-pi-kiosk.zip.sha256)
+      - name: Build release notes from changelog and commits
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf '## Changelog\\n\\n'
+            cat CHANGELOG.md
+            printf '\\n## Changes since previous release\\n\\n'
+            previous_tag="$(git tag --sort=-version:refname --list 'v[0-9]*' | head -n 1)"
+            if [[ -n "$previous_tag" ]]; then
+              git log "$previous_tag..HEAD" --no-merges --pretty='- %s (%h)' || true
+            else
+              git log -n 30 --no-merges --pretty='- %s (%h)'
+            fi
+            printf '\\n## Source\\n\\nCommit: \`%s\`\\n' "$GITHUB_SHA"
+          } > dist/release-notes.md
       - name: Publish GitHub release
         if: github.event_name != 'pull_request'
         env:
@@ -56,5 +75,5 @@ jobs:
             dist/gugzi-pi-kiosk.zip \
             dist/gugzi-pi-kiosk.zip.sha256 \
             --title "GugZi Pi Kiosk $TAG" \
-            --notes "Automated tested release from main ($GITHUB_SHA)." \
+            --notes-file dist/release-notes.md \
             --latest
