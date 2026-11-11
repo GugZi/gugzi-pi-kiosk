@@ -25,7 +25,10 @@ ln -sfn "$DEST" /opt/gugzi-kiosk/current.new
 mv -Tf /opt/gugzi-kiosk/current.new /opt/gugzi-kiosk/current
 install -m 644 "$ROOT/systemd/gugzi-kiosk.service" /etc/systemd/system/gugzi-kiosk.service
 ln -sfn /opt/gugzi-kiosk/current/gugzi-kiosk /usr/local/bin/gugzi-kiosk
-chmod +x "$DEST/gugzi-kiosk"
+chmod 755 "$DEST/gugzi-kiosk"
+if [[ -f "$DEST/scripts/cursor-cec.sh" ]]; then
+  chmod 755 "$DEST/scripts/cursor-cec.sh"
+fi
 # Only stop the old controller when explicitly migrating the Hallway device.
 if python3 - <<'PY'
 import json
