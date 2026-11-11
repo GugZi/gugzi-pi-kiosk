@@ -20,7 +20,7 @@ if [[ ! -f /opt/gugzi-kiosk/venv/bin/python ]]; then python3 -m venv /opt/gugzi-
 VERSION="$(cat "$ROOT/VERSION")"
 DEST="/opt/gugzi-kiosk/releases/${VERSION}"
 mkdir -p "$DEST"
-cp -a "$ROOT/gugzi_kiosk" "$ROOT/systemd" "$ROOT/gugzi-kiosk" "$ROOT/install.sh" "$ROOT/requirements.txt" "$ROOT/README.md" "$ROOT/VERSION" "$DEST/"
+cp -a "$ROOT/gugzi_kiosk" "$ROOT/scripts" "$ROOT/systemd" "$ROOT/gugzi-kiosk" "$ROOT/install.sh" "$ROOT/requirements.txt" "$ROOT/README.md" "$ROOT/VERSION" "$DEST/"
 ln -sfn "$DEST" /opt/gugzi-kiosk/current.new
 mv -Tf /opt/gugzi-kiosk/current.new /opt/gugzi-kiosk/current
 install -m 644 "$ROOT/systemd/gugzi-kiosk.service" /etc/systemd/system/gugzi-kiosk.service
