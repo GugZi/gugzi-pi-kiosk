@@ -170,6 +170,12 @@ def install():
             # Dependencies first: failure leaves the previous release untouched.
             subprocess.run([str(ROOT/'venv/bin/pip'), 'install', '-r', str(source/'requirements.txt')], check=True, timeout=240)
             shutil.copytree(source, destination, ignore=shutil.ignore_patterns('__pycache__', '.pytest_cache', '.git'))
+            # ZIP archives do not reliably retain executable bits on all
+            # platforms. Restore them before switching to the new release.
+            os.chmod(destination / 'gugzi-kiosk', 0o755)
+            cursor_helper = destination / 'scripts/cursor-cec.sh'
+            if cursor_helper.is_file():
+                os.chmod(cursor_helper, 0o755)
             old_target = (ROOT / 'current').resolve(strict=True)
             temp_link = ROOT / 'current.new'
             if temp_link.is_symlink():
