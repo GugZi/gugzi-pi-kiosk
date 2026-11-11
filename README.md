@@ -75,6 +75,8 @@ Emnet `gugzi/kiosk/fleet/command` accepterer `check_updates` og `reload`, men **
 
 ### Releases
 
+Home Assistant viser en kort **release_summary** (op til 255 tegn) direkte under **Controller-opdatering**. Tryk på **Read release announcement** for den komplette changelog på GitHub. Controlleren henter resumeet fra den aktuelle GitHub Release og viser ikke tidligere versioners ændringer som nye.
+
 Alle PR'er valideres i GitHub Actions. Et commit på `main` giver automatisk en ny nummereret GitHub Release med ZIP og SHA256. Opdateringsværktøjet installerer kun en release med det forventede navn og kontrolsum og genstarter tjenesten; ved registreret fejl genoprettes tidligere kodeversion. Det er ikke en kryptografisk signatur — beskyt GitHub-kontoen og `main`.
 
 **Vigtigt:** Test på Hallway før opdatering af flere enheder. HDMI `--off` kan stoppe Cage, og skærme uden DDC/CI understøtter ikke fysisk lysstyrke. Koden kan kun levere on-screen notifikationer, hvis en frontend eller Browser Mod er sat op til at vise `notification_event`.
