@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 
 import paho.mqtt.client as mqtt
+from .smart import SmartFeatures
 
 VERSION = (Path(__file__).resolve().parent.parent / 'VERSION').read_text().strip()
 CONFIG = Path('/etc/gugzi-kiosk/config.json')
@@ -26,20 +27,13 @@ def call(args, timeout=15):
 
 
 def ddc_call(args, timeout=18):
-    """Run ddcutil with a writable, private cache outside protected /root.
-
-    The kiosk service uses ProtectHome=true, so ddcutil's default
-    /root/.cache/ddcutil/dsa location is unavailable.
-    """
     cache_dir = STATE_DIR / '.cache'
     cache_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     env = os.environ.copy()
     env['HOME'] = str(STATE_DIR)
     env['XDG_CACHE_HOME'] = str(cache_dir)
-    return subprocess.run(
-        ['ddcutil', *args],
-        text=True, capture_output=True, timeout=timeout, check=True, env=env
-    )
+    return subprocess.run(['ddcutil', *args], text=True, capture_output=True,
+                          timeout=timeout, check=True, env=env)
 
 
 def load_json(path, default):
@@ -88,6 +82,7 @@ class Controller:
         self.latest_release=VERSION
         self.release_url=''
         self.last_gh_check=0
+        self.smart=SmartFeatures(self)
 
     def publish(self, suffix, val, retain=True):
         self.mqtt.publish(self.base+'/'+suffix, val, qos=1, retain=retain)
@@ -251,7 +246,8 @@ class Controller:
             'throttle_hex':hex(throttle) if throttle is not None else 'unknown',
             'kiosk':'ON' if self.kiosk_running() else 'OFF',
             'warning':'ON' if warn else 'OFF',
-            'updates':self.update_available, 'result':self.last_result, 'version':VERSION
+            'updates':self.update_available, 'result':self.last_result, 'version':VERSION,
+            'recovery_count':self.smart.recoveries, 'house_mode':self.smart.house_mode or 'unknown'
         }
 
     def discovery(self,kind,key,body):
@@ -312,6 +308,7 @@ class Controller:
             'icon':'mdi:package-up',
             'entity_category':'config'
         })
+        self.smart.discovery()
         # Update invokes only the trusted, locally configured GitHub release updater.
 
     def on_connect(self,client,userdata,flags,reason_code,properties):
@@ -320,6 +317,7 @@ class Controller:
             return
         client.subscribe(self.base+'/command',qos=1)
         client.subscribe('homeassistant/status')
+        self.smart.on_connect()
         self.discover()
         self.publish('availability','online')
         self.publish('screen_mode',self.state['mode'])
@@ -337,6 +335,7 @@ class Controller:
         if msg.topic=='homeassistant/status':
             if msg.payload==b'online': self.discover()
             return
+        if self.smart.on_message(msg): return
         if msg.retain: return
         payload=msg.payload.decode('utf-8','replace').strip()
         if payload.startswith('brightness:'):
@@ -354,6 +353,8 @@ class Controller:
 
     def command_job(self,payload):
         try:
+            if self.smart.on_command(payload):
+                return
             if payload in ('hdmi_on','hdmi_off'):
                 self.state['mode']='Manual'
                 self.persist()
@@ -410,6 +411,7 @@ class Controller:
         self.publish('state',json.dumps(self.monitor()))
 
     def schedule(self):
+        if self.smart.screen_tick(): return
         mode=self.state['mode']
         if mode=='Manual': return
         if mode=='Always on': target=True
@@ -423,7 +425,7 @@ class Controller:
         if target!=requested:self.screen(target)
 
     def recover(self):
-        if not self.cfg['recovery']['enabled'] or self.state['screen_requested']=='OFF':
+        if not self.cfg['recovery']['enabled'] or not self.smart.prefs['recovery_enabled'] or self.state['screen_requested']=='OFF':
             self.failures=0
             return
         self.failures=0 if self.kiosk_running() else self.failures+1
@@ -433,6 +435,7 @@ class Controller:
             self.failures=0
             self.pikiosk_reload()
             self.last_result='PiKiosk recovered'
+            self.smart.note_recovery('PiKiosk reload')
 
     def check_updates(self,force=False):
         # Reports distribution package versions, not a remote arbitrary branch.
@@ -513,6 +516,7 @@ class Controller:
                         self.publish_controller_update()
                         self.hdmi_publish()
                         self.publish_state()
+                        self.smart.tick()
                         if self.cfg['brightness']['enabled'] and self.state['screen_requested']=='ON':
                             if time.monotonic()-self.last_brightness_read>120:
                                 try:
@@ -530,9 +534,15 @@ class Controller:
                             value=self.pending_brightness
                             self.pending_brightness=None
                             self.brightness_set(value)
+                            self.smart.user_brightness_changed()
                             self.last_brightness_write=time.monotonic()
                         except Exception as exc:print('DDC write:',exc,flush=True)
                         finally:self.lock.release()
+                queued = self.smart.take_queued()
+                if queued and self.lock.acquire(blocking=False):
+                    threading.Thread(target=self.command_job,args=(queued,),daemon=True).start()
+                elif queued:
+                    self.smart.queue.insert(0, queued)
                 time.sleep(.5)
         finally:
             self.publish('availability','offline')

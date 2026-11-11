@@ -8,8 +8,9 @@ case "$ACTION" in
   configure) ${EDITOR:-nano} /etc/gugzi-kiosk/config.json ;;
   diagnose) systemctl is-active gugzi-kiosk; /opt/gugzi-kiosk/venv/bin/python -m py_compile /opt/gugzi-kiosk/current/gugzi_kiosk/controller.py; ls -l /dev/i2c-* 2>/dev/null || true ;;
   update) exec /opt/gugzi-kiosk/venv/bin/python /opt/gugzi-kiosk/current/gugzi_kiosk/updater.py ;;
+  cursor) shift; exec /opt/gugzi-kiosk/current/scripts/cursor-cec.sh "${1:-status}" ;;
   rollback)
     echo 'Available versions:'; ls -1 /opt/gugzi-kiosk/releases
     echo 'To roll back select a previously tested release manually and restart gugzi-kiosk.service.' ;;
-  *) echo 'Usage: sudo gugzi-kiosk {status|logs|restart|configure|diagnose|update|rollback}' ;;
+  *) echo 'Usage: sudo gugzi-kiosk {status|logs|restart|configure|diagnose|update|cursor|rollback}' ;;
 esac

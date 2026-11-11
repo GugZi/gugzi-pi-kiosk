@@ -116,7 +116,7 @@ def extract_safe(zip_path, location):
                 raise RuntimeError('Symlink in release archive')
         archive.extractall(location)
     source = location / 'gugzi-pi-kiosk'
-    for name in ('VERSION', 'install.sh', 'requirements.txt', 'gugzi-kiosk', 'systemd/gugzi-kiosk.service', 'gugzi_kiosk/controller.py'):
+    for name in ('VERSION', 'install.sh', 'requirements.txt', 'gugzi-kiosk', 'systemd/gugzi-kiosk.service', 'gugzi_kiosk/controller.py', 'gugzi_kiosk/smart.py', 'scripts/cursor-cec.sh'):
         if not (source / name).is_file():
             raise RuntimeError('Release is missing ' + name)
     return source

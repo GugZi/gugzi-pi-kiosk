@@ -59,7 +59,8 @@ def main():
         'screen':{'schedule_on':'08:00','schedule_off':'23:00','refresh_after_wake':True,'refresh_delay':3},
         'dashboards':{'default':next(iter(dashboards)),'urls':dashboards},
         'recovery':{'enabled':True},'alerts':{'temperature':75,'disk':85},
-        'update':{'repository':'GugZi/gugzi-pi-kiosk','channel':'stable'}
+        'update':{'repository':'GugZi/gugzi-pi-kiosk','channel':'stable'},
+        'fleet':{'enabled':False,'allow_install_all':False}
     }
     CONFIG.parent.mkdir(parents=True,exist_ok=True)
     CONFIG.write_text(json.dumps(cfg,indent=2))
