@@ -39,5 +39,10 @@ def test_mqtt_actions_are_queued_instead_of_discarded_when_busy():
 
 def test_update_error_is_exposed_to_home_assistant():
     assert "'update_error'" in CONTROLLER
-    assert "'error':str(update.get('error',''))[:220]" in CONTROLLER
+    assert "self.publish('update_error',str(update.get('error',''))[:220] or 'Ingen')" in CONTROLLER
+    assert "'state_topic':self.base+'/update_error'" in CONTROLLER
+    # This key is NOT supported in MQTT Update JSON and made Home Assistant
+    # reject the entire payload while preserving an old installed_version.
+    update_method = CONTROLLER.split('def publish_controller_update(self):', 1)[1].split('def start_controller_update(self):', 1)[0]
+    assert "'error':" not in update_method
     assert "last_update_start" in CONTROLLER

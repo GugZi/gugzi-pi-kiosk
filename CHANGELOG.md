@@ -1,5 +1,15 @@
 # Changelog
 
+## Next release – MQTT Update version synchronization
+
+### Fixed
+- Fixed stale installed-version in Home Assistant's **Controller-opdatering** entity: MQTT Update rejects the unsupported `error` JSON field and had retained an old version (for example 1.7.0 instead of installed 1.9.0).
+- Publish the update error separately on `gugzi/<device>/update_error` while keeping the existing diagnostic entity and MQTT unique ID.
+- Preserve release summaries, release links, update button and Pi-specific configuration.
+
+### Tests
+- Added a runtime regression test for the actual MQTT Update JSON payload and validated that unsupported keys cannot be reintroduced.
+
 ## Next release – Home Assistant changelog preview
 
 ### Added
