@@ -1,0 +1,19 @@
+[Unit]
+Description=GugZi Pi Kiosk MQTT Controller
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/gugzi-kiosk/venv/bin/python -m gugzi_kiosk.controller
+WorkingDirectory=/opt/gugzi-kiosk/current
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
