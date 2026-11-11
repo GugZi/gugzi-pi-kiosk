@@ -2,6 +2,7 @@
 """GugZi Pi Kiosk Controller - MQTT remote monitoring for PiKiosk."""
 import json
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -83,6 +84,9 @@ class Controller:
         self.release_url=''
         self.last_gh_check=0
         self.smart=SmartFeatures(self)
+        self.command_queue=queue.Queue(maxsize=64)
+        self.last_update_start=0
+        threading.Thread(target=self.command_worker,daemon=True).start()
 
     def publish(self, suffix, val, retain=True):
         self.mqtt.publish(self.base+'/'+suffix, val, qos=1, retain=retain)
@@ -299,6 +303,13 @@ class Controller:
                     'command_template':'url:'+name+':{{ value }}',
                     'max':255,'mode':'text','icon':'mdi:link'
                 })
+        self.discovery('sensor','update_error',{
+            'name':'Seneste controller-opdateringsfejl',
+            'state_topic':self.base+'/controller_update',
+            'value_template':"{{ value_json.error | default('') }}",
+            'entity_category':'diagnostic',
+            'icon':'mdi:alert-circle-outline'
+        })
         self.discovery('update','controller_update',{
             'name':'Controller-opdatering',
             'title':'GugZi Pi Kiosk Controller',
@@ -346,10 +357,22 @@ class Controller:
                 self.brightness_received=time.monotonic()
             except ValueError: return
             return
-        if not self.lock.acquire(blocking=False):
-            print('Busy; command skipped',flush=True)
-            return
-        threading.Thread(target=self.command_job,args=(payload,),daemon=True).start()
+        try:
+            self.command_queue.put_nowait(payload)
+        except queue.Full:
+            print('MQTT command queue full; command rejected',flush=True)
+            self.last_result='ERROR: MQTT command queue full'
+
+    def command_worker(self):
+        # MQTT callback never waits for slow network, DDC, or update operations.
+        # Serialize actions behind the existing monitor/recovery lock.
+        while True:
+            payload=self.command_queue.get()
+            self.lock.acquire()
+            try:
+                self.command_job(payload)  # releases self.lock in finally
+            finally:
+                self.command_queue.task_done()
 
     def command_job(self,payload):
         try:
@@ -483,7 +506,8 @@ class Controller:
             latest=current
         obj={'installed_version':current,'latest_version':latest,
              'title':'GugZi Pi Kiosk Controller',
-             'in_progress':bool(update.get('in_progress',False))}
+             'in_progress':bool(update.get('in_progress',False)),
+             'error':str(update.get('error',''))[:220]}
         if self.release_url:
             obj['release_url']=self.release_url
         self.publish('controller_update', json.dumps(obj))
@@ -496,10 +520,18 @@ class Controller:
         if self.latest_release == VERSION:
             self.last_result='Already up to date'
             return
-        # Launch in its own systemd transient unit. This survives restart
-        # of the kiosk service being updated. Never accept a URL via MQTT.
+        now=time.monotonic()
+        if now-self.last_update_start<90:
+            self.last_result='Update request already sent; check updater logs'
+            return
+        self.last_update_start=now
+        # Run the updater through the installed Python interpreter, not the
+        # CLI script: GitHub ZIP extraction can strip executable permissions.
+        # Type=exec lets systemd-run report an immediate exec failure.
         call(['systemd-run','--unit=gugzi-kiosk-updater','--collect',
-              '/usr/local/bin/gugzi-kiosk','update'],timeout=12)
+              '--property=Type=exec',
+              '/opt/gugzi-kiosk/venv/bin/python',
+              '/opt/gugzi-kiosk/current/gugzi_kiosk/updater.py'],timeout=12)
         self.last_result='GitHub update started'
 
     def run_forever(self):
