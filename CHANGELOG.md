@@ -1,5 +1,15 @@
 # Changelog
 
+## Next release – Home Assistant changelog preview
+
+### Added
+- Show a concise, current-release changelog in Home Assistant's Controller-opdatering dialog using MQTT `release_summary` (maximum 255 characters).
+- Keep the full GitHub release announcement accessible through the existing release link.
+
+### Fixed
+- Prevent older changelog sections from being used as the summary for a new update.
+- Preserve the existing MQTT update entity ID, update command and local settings.
+
 ## Next release – updater and MQTT reliability
 
 ### Fixed
