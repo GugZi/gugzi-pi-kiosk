@@ -1,0 +1,55 @@
+name: Validate and publish kiosk update
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kiosk-release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python setup
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source
+        run: |
+          python -m compileall -q gugzi_kiosk setup.py
+          python -m pip install pytest
+          python -m pytest -q tests
+          bash -n install.sh
+          bash -n gugzi-kiosk
+      - name: Package tested version
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="1.${GITHUB_RUN_NUMBER}.0"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          mkdir -p dist/gugzi-pi-kiosk
+          cp -a gugzi_kiosk systemd requirements.txt setup.py install.sh gugzi-kiosk README.md CHANGELOG.md .gitignore dist/gugzi-pi-kiosk/
+          echo "$VERSION" > dist/gugzi-pi-kiosk/VERSION
+          (cd dist && zip -qr gugzi-pi-kiosk.zip gugzi-pi-kiosk -x '*/__pycache__/*' '*.pyc')
+          (cd dist && sha256sum gugzi-pi-kiosk.zip > gugzi-pi-kiosk.zip.sha256)
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.package.outputs.tag }}
+        run: |
+          gh release create "$TAG" \
+            dist/gugzi-pi-kiosk.zip \
+            dist/gugzi-pi-kiosk.zip.sha256 \
+            --title "GugZi Pi Kiosk $TAG" \
+            --notes "Automated tested release from main ($GITHUB_SHA)." \
+            --latest
