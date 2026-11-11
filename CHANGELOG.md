@@ -1,6 +1,19 @@
 # Changelog
 
-## Next release (GitHub Actions assigns version)
+## Next release – updater and MQTT reliability
+
+### Fixed
+- Corrected Home Assistant update button failing with `systemd status=203/EXEC` because ZIP installation lost executable permissions on `gugzi-kiosk`.
+- Start the updater directly with the installed Python interpreter to avoid requiring CLI executable permissions.
+- Restore executable permissions for the kiosk CLI and cursor helper after installation and every GitHub update.
+- Queue MQTT commands instead of silently dropping them during monitoring or a slow operation (`Busy; command skipped`).
+- Ignore repeated update requests for 90 seconds while a prior attempt starts.
+
+### Added
+- A Home Assistant diagnostic sensor for the most recent controller update error.
+- Regression tests for update launching, script permissions and MQTT command queue.
+
+## Previous smart-kiosk feature update
 - Added non-disruptive opt-in auto brightness, house-mode override, and temporary manual brightness hold.
 - Added opt-in motion wake and auto-off using per-device HA MQTT events.
 - Added opt-in automatic dashboard selection for day, evening, night and Goodnight.
