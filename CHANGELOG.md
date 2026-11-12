@@ -1,5 +1,17 @@
 # Changelog
 
+## Next release – Pi 3 B+ HDMI-CEC cursor compatibility
+
+### Fixed
+- Match the actual Pi 3 B+ virtual HDMI-CEC input name `vc4-hdmi` (EV_REL=3), while continuing to recognize `vc4-hdmi-0/1` on other Pi versions.
+- Replace the potentially disruptive full-input `LIBINPUT_IGNORE_DEVICE` rule with a narrower attempt to remove only phantom mouse/pointing-stick udev classification, preserving HDMI-CEC keyboard and USB/touch input.
+- Show exact HDMI-CEC input names, pointer capability masks and udev device types via `gugzi-kiosk cursor status`.
+
+### Safety
+- This is an opt-in, reversible workaround, not a guaranteed fix for all Cage builds; Wayland may still report a cursor from raw input capabilities.
+- Existing cursor rules are replaced only by running `sudo gugzi-kiosk cursor enable`; controller updates do not rewrite local udev settings.
+- Use `sudo gugzi-kiosk cursor disable` and reboot to restore the original input classification.
+
 ## Next release – Standalone and touchscreen setup profiles
 
 ### Added
