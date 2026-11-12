@@ -73,7 +73,7 @@ Denne mekanisme bruger den eksisterende **Automatisk gendannelse**-switch. Den a
 
 ### Fjerne musemarkøren fra Cage/Wayland
 
-Cage har ikke en generel, pålidelig `hide_cursor`-indstilling. På nogle Raspberry Pi'er stammer markøren fra de virtuelle HDMI-CEC-pointere `vc4-hdmi-0/1` og ikke fra en rigtig mus. Projektet indeholder en **valgfri og reversibel** udev-regel, der kun ignorerer disse to pseudo-enheder for libinput:
+Cage har ikke en generel, pålidelig `hide_cursor`-indstilling. På nogle Raspberry Pi'er stammer markøren fra de virtuelle HDMI-CEC-inputs med pointerfunktioner. På Pi 3 B+ kan den hedde **`vc4-hdmi`** (EV_REL=3); på andre Pi'er hedder den `vc4-hdmi-0/1`. Projektet indeholder en **valgfri og reversibel** udev-regel, der forsøger at fjerne *museklassificeringen* af disse specifikke CEC-enheder — ikke at ignorere hele enheden, fordi CEC også kan være det eneste tastaturinput for Cage:
 
 ```bash
 sudo gugzi-kiosk cursor status
@@ -84,7 +84,7 @@ sudo gugzi-kiosk cursor disable
 sudo reboot
 ```
 
-Touch og USB-input deaktiveres ikke af disse regler. Hvis cursoren kommer fra en anden pegeenhed, virker metoden ikke; diagnosticér input-enheden i stedet for at deaktivere input generelt.
+Touch, USB-input og HDMI-CEC-tastaturfunktioner deaktiveres ikke bevidst af denne regel. `sudo gugzi-kiosk cursor status` viser den faktiske enheds navn, `EV_REL` og relevante udev-inputklassifikationer. Dette er en **bedre, men ikke garanteret** løsning: Cage kan stadig oprette en markør ud fra rå `EV_REL`-kapabiliteter. Kontrollér derfor effekten efter genstart. Hvis den stadig ses, skal vi undersøge libinput/Cage mere præcist og ikke deaktivere alle input-enheder. Reglen kan til enhver tid rulles tilbage via `cursor disable` og genstart.
 
 ### Flere Pi'er og central opdatering
 
