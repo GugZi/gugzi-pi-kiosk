@@ -29,6 +29,9 @@ chmod 755 "$DEST/gugzi-kiosk"
 if [[ -f "$DEST/scripts/cursor-cec.sh" ]]; then
   chmod 755 "$DEST/scripts/cursor-cec.sh"
 fi
+if [[ -f "$DEST/scripts/cursor-invisible.sh" ]]; then
+  chmod 755 "$DEST/scripts/cursor-invisible.sh"
+fi
 # Only stop the old controller when explicitly migrating the Hallway device.
 if python3 - <<'PY'
 import json
