@@ -1,5 +1,18 @@
 # Changelog
 
+## Next release – fully transparent standalone kiosk cursor
+
+### Added
+- `sudo gugzi-kiosk cursor hide` installs an opt-in, transparent Xcursor theme for the local kiosk login user and enables it on subsequent PiKiosk restarts.
+- `sudo gugzi-kiosk cursor show` fully rolls back the visual cursor override and restores the default theme.
+- `sudo gugzi-kiosk cursor status` reports the theme installation and checks whether Cage inherited the intended environment variable.
+- Regression checks cover the new CLI, safe per-user scope, transparent cursor shapes and executable permissions across both initial install and GitHub OTA updates.
+
+### Safety and limitations
+- Does **not** disable USB, touchscreen, mouse or HDMI-CEC devices. Does not affect existing or other Pi installations automatically.
+- Cage obtains its default cursor from `XCURSOR_THEME`; an application may still draw a separate cursor surface. Verify visually on the actual Raspberry Pi.
+- Existing CEC input helper remains available with `cursor enable/disable`; the new visual approach requires no udev-rule changes.
+
 ## Next release – Pi 3 B+ HDMI-CEC cursor compatibility
 
 ### Fixed
