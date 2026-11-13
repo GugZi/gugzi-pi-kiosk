@@ -71,6 +71,23 @@ Controlleren kontrollerer også, om Chromiums **webside-renderer** kører. Chrom
 
 Denne mekanisme bruger den eksisterende **Automatisk gendannelse**-switch. Den anvendes kun, hvis skærmen er sat til at være tændt. Ukendt processtatus udløser ingen genstart. Diagnostiksensoren **Chromium webside** viser `running`, `missing`, `unknown`, `offline` eller `inactive`. Funktionen er en konservativ procesbaseret kontrol, ikke en fuld garanti for at browserfanens indhold er korrekt.
 
+### Skjul musemarkøren helt (valgfrit, kun lokalt)
+
+På **standalone-skærme uden touch** kan du forsøge at skjule markøren helt ved at installere et 100 % gennemsigtigt Xcursor-tema. Dette er mere diskret end at flytte markøren til skærmkanten. Cage læser `XCURSOR_THEME` ved opstart, og PiKiosk starter Cage via kiosk-brugerens loginsession. Det kræver ingen ændring af HDMI-CEC input-enheder og påvirker derfor ikke tastatur eller touch-funktioner.
+
+```bash
+sudo gugzi-kiosk cursor hide
+sudo pikiosk reload
+sudo gugzi-kiosk cursor status
+```
+
+- `hide` installerer et særskilt gennemsigtigt tema under `/usr/share/icons/GugZi-Invisible`, og sætter kun `XCURSOR_THEME` for den lokalt konfigurerede kiosk-bruger via `/etc/profile.d/gugzi-kiosk-invisible-cursor.sh`. Første gang installeres Debian-pakken `x11-apps`, hvis `xcursorgen` mangler.
+- `status` viser, om temaet er installeret, og om den kørende Cage-proces har modtaget `XCURSOR_THEME`.
+- `show` fjerner den ekstra profil og vores eget tema, så normal markør vender tilbage efter `sudo pikiosk reload`.
+- **Kun opt-in.** Opdatering og geninstallation ændrer aldrig denne lokale indstilling. Vælg det på den konkrete Pi, ikke automatisk på alle touchskærme.
+
+**Begrænsning:** Et gennemsigtigt Xcursor-tema skjuler normalt kompositorens temabaserede markør, men Wayland-klienter kan også tegne egne cursor-surfaces, som muligvis stadig kan ses. På din Pi skal det derfor bekræftes visuelt efter en PiKiosk-reload. Vi lover ikke fuld markørfrihed på alle kombinationer af Cage/Chromium på forhånd.
+
 ### Fjerne musemarkøren fra Cage/Wayland
 
 Cage har ikke en generel, pålidelig `hide_cursor`-indstilling. På nogle Raspberry Pi'er stammer markøren fra de virtuelle HDMI-CEC-inputs med pointerfunktioner. På Pi 3 B+ kan den hedde **`vc4-hdmi`** (EV_REL=3); på andre Pi'er hedder den `vc4-hdmi-0/1`. Projektet indeholder en **valgfri og reversibel** udev-regel, der forsøger at fjerne *museklassificeringen* af disse specifikke CEC-enheder — ikke at ignorere hele enheden, fordi CEC også kan være det eneste tastaturinput for Cage:

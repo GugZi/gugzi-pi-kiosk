@@ -176,6 +176,9 @@ def install():
             cursor_helper = destination / 'scripts/cursor-cec.sh'
             if cursor_helper.is_file():
                 os.chmod(cursor_helper, 0o755)
+            invisible_helper = destination / 'scripts/cursor-invisible.sh'
+            if invisible_helper.is_file():
+                os.chmod(invisible_helper, 0o755)
             old_target = (ROOT / 'current').resolve(strict=True)
             temp_link = ROOT / 'current.new'
             if temp_link.is_symlink():
