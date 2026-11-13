@@ -8,7 +8,17 @@ case "$ACTION" in
   configure) ${EDITOR:-nano} /etc/gugzi-kiosk/config.json ;;
   diagnose) systemctl is-active gugzi-kiosk; /opt/gugzi-kiosk/venv/bin/python -m py_compile /opt/gugzi-kiosk/current/gugzi_kiosk/controller.py; ls -l /dev/i2c-* 2>/dev/null || true ;;
   update) exec /opt/gugzi-kiosk/venv/bin/python /opt/gugzi-kiosk/current/gugzi_kiosk/updater.py ;;
-  cursor) shift; exec /opt/gugzi-kiosk/current/scripts/cursor-cec.sh "${1:-status}" ;;
+  cursor)
+    shift
+    case "${1:-status}" in
+      hide|show) exec /opt/gugzi-kiosk/current/scripts/cursor-invisible.sh "$1" ;;
+      status)
+        /opt/gugzi-kiosk/current/scripts/cursor-cec.sh status
+        exec /opt/gugzi-kiosk/current/scripts/cursor-invisible.sh status
+        ;;
+      *) exec /opt/gugzi-kiosk/current/scripts/cursor-cec.sh "$1" ;;
+    esac
+    ;;
   rollback)
     echo 'Available versions:'; ls -1 /opt/gugzi-kiosk/releases
     echo 'To roll back select a previously tested release manually and restart gugzi-kiosk.service.' ;;
